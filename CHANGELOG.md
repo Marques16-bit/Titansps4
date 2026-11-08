@@ -1,5 +1,11 @@
 # Changelog
 
+## v00.06
+- Causa do app fechar sozinho: o `malloc` padrão do OpenOrbis reserva um bloco enorme de memória na primeira alocação e
+  derruba o app quando isso falha (acontece em alguns firmwares). O `fopen` aloca memória, então o app caía já no primeiro
+  log: os `app.log` ficavam com 0 bytes.
+- O app não usa mais `malloc` nem stdio de arquivos: log, `settings.ini` e leitura do log usam `open/read/write` direto.
+
 ## v00.05
 - Volta a gerar um único `.pkg`.
 - Sequência de inicialização do vídeo igual à do app de referência: módulos → VideoOut → fila de eventos de flip →

@@ -1,7 +1,9 @@
 #include "settings.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static const char* const OFFON[] = {"Off", "On"};
 static const char* const RES[] = {"1280x720", "1600x900", "1920x1080"};
@@ -54,45 +56,64 @@ const char* settings_value(const Settings* s, int id) {
     return k_settings[id].names[v];
 }
 
+/* E/S direta (open/read/write): o malloc padrao do OpenOrbis derruba o app neste console, e fopen aloca memoria. */
+static char g_ini[4096];
+
 static void trim(char* s) {
     size_t n = strlen(s);
     while (n && (s[n - 1] == '\n' || s[n - 1] == '\r' || s[n - 1] == ' ' || s[n - 1] == '\t')) s[--n] = 0;
 }
 
-int settings_load(Settings* s, const char* path) {
-    FILE* f = fopen(path, "r");
-    if (!f) return -1;
-    char line[160];
-    while (fgets(line, sizeof line, f)) {
-        trim(line);
-        if (line[0] == '#' || line[0] == 0) continue;
-        char* eq = strchr(line, '=');
-        if (!eq) continue;
-        *eq = 0;
-        const char* key = line;
-        const char* value = eq + 1;
-        for (int i = 0; i < S_COUNT; i++) {
-            if (strcmp(key, k_settings[i].key) != 0) continue;
-            for (int j = 0; j < k_settings[i].count; j++)
-                if (strcmp(value, k_settings[i].names[j]) == 0) s->v[i] = j;
-        }
+static void apply_line(Settings* s, char* line) {
+    trim(line);
+    if (line[0] == '#' || line[0] == 0) return;
+    char* eq = strchr(line, '=');
+    if (!eq) return;
+    *eq = 0;
+    const char* key = line;
+    const char* value = eq + 1;
+    for (int i = 0; i < S_COUNT; i++) {
+        if (strcmp(key, k_settings[i].key) != 0) continue;
+        for (int j = 0; j < k_settings[i].count; j++)
+            if (strcmp(value, k_settings[i].names[j]) == 0) s->v[i] = j;
     }
-    fclose(f);
+}
+
+int settings_load(Settings* s, const char* path) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return -1;
+    int n = (int)read(fd, g_ini, sizeof g_ini - 1);
+    close(fd);
+    if (n < 0) return -1;
+    g_ini[n] = 0;
+    char* p = g_ini;
+    while (*p) {
+        char line[160];
+        size_t k = 0;
+        while (*p && *p != '\n') {
+            if (k < sizeof line - 1) line[k++] = *p;
+            p++;
+        }
+        if (*p == '\n') p++;
+        line[k] = 0;
+        apply_line(s, line);
+    }
     return 0;
 }
 
 int settings_save(const Settings* s, const char* path) {
-    FILE* f = fopen(path, "w");
-    if (!f) return -1;
-    fprintf(f, "# Titans of the Tide (PS4) - opcoes. Pode editar: chave=valor.\n");
+    int len = snprintf(g_ini, sizeof g_ini, "# Titans of the Tide (PS4) - opcoes. Pode editar: chave=valor.\n");
     const char* group = "";
-    for (int i = 0; i < S_COUNT; i++) {
+    for (int i = 0; i < S_COUNT && len < (int)sizeof g_ini - 128; i++) {
         if (strcmp(group, k_settings[i].group) != 0) {
             group = k_settings[i].group;
-            fprintf(f, "\n# %s\n", group);
+            len += snprintf(g_ini + len, sizeof g_ini - len, "\n# %s\n", group);
         }
-        fprintf(f, "%s=%s\n", k_settings[i].key, settings_value(s, i));
+        len += snprintf(g_ini + len, sizeof g_ini - len, "%s=%s\n", k_settings[i].key, settings_value(s, i));
     }
-    fclose(f);
-    return 0;
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) return -1;
+    int ok = write(fd, g_ini, (size_t)len) == len;
+    close(fd);
+    return ok ? 0 : -1;
 }

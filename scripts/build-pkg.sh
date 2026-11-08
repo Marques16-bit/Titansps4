@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Compila o app e gera um .pkg (eboot assinado como em app/cmake/eboot.cmake):  PKG_VERSION=00.05 bash scripts/build-pkg.sh
+# Compila o app e gera um .pkg (eboot assinado como em app/cmake/eboot.cmake):  PKG_VERSION=00.06 bash scripts/build-pkg.sh
 # Pre-requisito: toolchain em /opt/pacbrew (sudo bash scripts/fetch-pacbrew.sh /).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${PKG_VERSION:-00.05}"
+VERSION="${PKG_VERSION:-00.06}"
 TITLE_ID="${PKG_TITLE_ID:-TITA00001}"
 source "$ROOT/scripts/ps4-env.sh"
 

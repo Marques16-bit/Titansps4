@@ -2,6 +2,7 @@
  * Video: buffers em memoria direta write-combined + sceVideoOut. Controle: ScePad.
  * IMPORTANTE: os modulos do sistema (UserService, VideoOut, Pad...) precisam ser carregados antes do uso; chamar uma
  * biblioteca sem o modulo carregado fecha o app sem nenhuma mensagem. */
+#include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -10,6 +11,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <orbis/Pad.h>
 #include <orbis/SystemService.h>
@@ -55,17 +57,23 @@ static void toast(const char* fmt, ...) { (void)fmt; }
 static uint32_t g_frame[UI_W * UI_H]; /* o quadro e montado aqui (RAM comum) e copiado de uma vez */
 static char g_log[LOG_TAIL + 1];
 
+/* Sem stdio de arquivos (fopen/fprintf): o malloc padrao do OpenOrbis falha neste console e derruba o app na primeira
+ * alocacao. open/write nao alocam memoria. */
 static void logf_(const char* fmt, ...) {
     char line[256];
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(line, sizeof line, fmt, ap);
+    int n = vsnprintf(line, sizeof line - 1, fmt, ap);
     va_end(ap);
-    printf("titans: %s\n", line);
-    FILE* f = fopen(LOG_FILE, "a");
-    if (f) {
-        fprintf(f, "%s\n", line);
-        fclose(f);
+    if (n < 0) n = 0;
+    if (n > (int)sizeof line - 2) n = (int)sizeof line - 2;
+    line[n] = '\n';
+    line[n + 1] = 0;
+    printf("titans: %s", line);
+    int fd = open(LOG_FILE, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd >= 0) {
+        write(fd, line, (size_t)n + 1);
+        close(fd);
     }
 }
 
@@ -99,18 +107,18 @@ static void load_system_modules(void) {
 
 static void load_log(int prev) {
     const char* path = prev ? LOG_PREV : LOG_FILE;
-    FILE* f = fopen(path, "rb");
-    if (!f) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
         snprintf(g_log, sizeof g_log, "(sem log em %s)\n", path);
         return;
     }
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    long start = size > LOG_TAIL ? size - LOG_TAIL : 0;
-    fseek(f, start, SEEK_SET);
-    size_t n = fread(g_log, 1, LOG_TAIL, f);
+    off_t size = lseek(fd, 0, SEEK_END);
+    off_t start = size > LOG_TAIL ? size - LOG_TAIL : 0;
+    lseek(fd, start, SEEK_SET);
+    ssize_t n = read(fd, g_log, LOG_TAIL);
+    close(fd);
+    if (n < 0) n = 0;
     g_log[n] = 0;
-    fclose(f);
     if (start > 0) {
         char* nl = strchr(g_log, '\n');
         if (nl) memmove(g_log, nl + 1, strlen(nl + 1) + 1);
