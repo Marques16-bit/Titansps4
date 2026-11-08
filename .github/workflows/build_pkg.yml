@@ -5,7 +5,7 @@ on:
     inputs:
       version:
         description: 'Versão do pacote (XX.YY)'
-        default: '00.04'
+        default: '00.05'
 
 jobs:
   build:
