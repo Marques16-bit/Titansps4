@@ -1,11 +1,18 @@
 # Changelog
 
+## v00.03
+- Corrige o app que abria e fechava sozinho: agora carrega os módulos do sistema (SystemService, UserService, VideoOut, Pad)
+  antes de usá-los. Chamar uma biblioteca sem o módulo carregado fecha o app sem mensagem.
+- Menu vertical Start / Settings / Log / Exit, com capa nova (`icon0.png`, `pic1.png`) e emblema no app.
+- Settings com 23 opções (vídeo, overlay, áudio, controles, sistema) salvas em `/data/Titans/config/settings.ini`.
+- Overlay opcional: FPS, RAM, temperatura e armazenamento. Tela Log com a execução atual e a anterior.
+- Estrutura de pastas `/data/Titans/{game,config,logs,saves,cache/shaders}`, criada ao abrir.
+- Log de falhas: registra cada etapa da inicialização e o sinal de crash (SIGSEGV etc.).
+- O pacote leva também `sce_sys/about/right.sprx` quando a toolchain traz.
+- Removido o patch de `.ini` (workflow, script e `config/`).
+
 ## v00.02
-- Limpeza: scripts de empacotamento reescritos (`fetch-pacbrew.sh`, `make-pkg.sh`, `ps4-env.sh`, `gp4_dirs.py`, `check_oelf.py`).
-- Corrige o erro de "dados corrompidos" ao abrir: o pacote agora leva `sce_module/libc.prx` e `sce_module/libSceFios2.prx`
-  (exigidos pelo OpenOrbis).
-- A versão aparece no subtítulo do app e no log `/data/titans-of-the-tide.log`.
-- O `build.log` lista o conteúdo do pacote e o `param.sfo`.
+- Pacote com `sce_module/libc.prx` e `sce_module/libSceFios2.prx`; versão no app; `build.log` com conteúdo do pacote.
 
 ## v00.01
-- Primeiro app-menu (tela, controle, Criar caminho) e workflows.
+- Primeiro app-menu e workflows.

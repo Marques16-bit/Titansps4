@@ -32,6 +32,16 @@ for prx in libc.prx libSceFios2.prx; do
     echo "sce_module/$prx <- $src" >&2
 done
 
+# right.sprx (sce_sys/about) faz parte do pacote padrao do OpenOrbis; entra se a toolchain trouxer.
+right="$(find "$OPENORBIS" -path '*/sce_sys/about/right.sprx' -print -quit 2>/dev/null || true)"
+if [ -n "$right" ]; then
+    mkdir -p "$STAGE/sce_sys/about"
+    cp "$right" "$STAGE/sce_sys/about/right.sprx"
+    echo "sce_sys/about/right.sprx <- $right" >&2
+else
+    echo "aviso: right.sprx nao encontrado na toolchain (seguindo sem ele)" >&2
+fi
+
 # CONTENT_ID = IV0000-<TITLE_ID>_00-<rotulo de 16 caracteres, completado com 0>
 label="$(printf '%s' "$LABEL" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9' | cut -c1-16)"
 label="$(printf '%-16s' "$label" | tr ' ' '0')"

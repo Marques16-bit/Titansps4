@@ -2,34 +2,40 @@
 
 Tudo roda no GitHub Actions; nada precisa de computador.
 
-## Estado real (leia primeiro) — v00.02, veja CHANGELOG.md
-- **Funciona (a testar no seu PS4):** o app-menu. Gera um `.pkg` com tela própria, controle DualShock 4 e 3 botões:
-  **Iniciar** (só habilita se existir `/data/titans-of-the-tide/game/Engine`), **Criar caminho** (cria a pasta do jogo) e **Exit**.
-- **Ainda não existe:** o runtime que abre o jogo. Rodar a UE5 do PC no PS4 exige uma camada Windows→PS4 e
-  D3D12/Vulkan→GPU do PS4. O botão **Iniciar** só avisa isso.
-- **Patch gráfico:** o workflow `PS4 Patch` gera os `.ini` com 900p, render scale 75%, 30 FPS e Medium. Eles só têm efeito
-  quando o runtime existir para aplicá-los.
-- O build nunca foi rodado fora do GitHub (o ambiente onde isto foi montado não tem a toolchain nem rede). Se a primeira
-  execução falhar, baixe o artefato `build-log` e mande o `build.log`.
+## Estado real (v00.03, veja CHANGELOG.md)
+- **O app:** abre com capa e menu vertical **Start / Settings / Log / Exit** (controle DualShock 4).
+- **Settings:** opções de vídeo (resolução, render scale, limite de FPS, VSync, texturas, sombras, bloom, SSR, anti-aliasing),
+  overlay (FPS, RAM, temperatura, armazenamento), áudio, controles e sistema. Ficam em `/data/Titans/config/settings.ini`.
+  Não existe mais patch de `.ini`: o runtime do port vai ler estas opções.
+- **Log:** mostra `/data/Titans/logs/app.log` (execução atual) e `app.prev.log` (anterior, com Triângulo).
+- **Ainda não existe:** o runtime que abre o jogo. **Start** só avisa isso.
+- Temperatura e armazenamento aparecem como `n/a` se o sistema não deixar ler (o `build.log` diz o que foi habilitado).
+
+## Pastas no PS4 (criadas pelo app ao abrir)
+```
+/data/Titans/
+  game/             arquivos do jogo da versão de PC (precisa existir game/Engine)
+  config/           settings.ini
+  logs/             app.log, app.prev.log
+  saves/            saves do jogo
+  cache/shaders/    cache de shaders
+```
 
 ## Passo a passo (celular, pelo navegador)
-1. Crie `.github/workflows/extract_zip.yml` (Add file → Create new file; cole o conteúdo de `workflows/extract_zip.yml`).
-2. Envie este zip para a raiz do repo com o nome **`repo.zip`** (Add file → Upload files). O workflow *Extrair repo.zip*
-   roda sozinho e espalha tudo na raiz.
-3. O Actions não pode criar workflows. Mova à mão: abra `workflows/build_pkg.yml` → lápis → no campo do nome troque para
-   `.github/workflows/build_pkg.yml` → Commit. Repita com `ps4_patch.yml`.
-4. Aba **Actions → Build PKG → Run workflow**. No fim, baixe o artefato **ps4-pkg** (`Titans-PS4-vXX.XX.pkg`).
-   O artefato **build-log** traz o `build.log` e um PNG do menu.
-5. Instale o `.pkg` com o Package Installer do GoldHEN. Para o jogo: **Criar caminho** no app, depois copie os arquivos por FTP
-   para `/data/titans-of-the-tide/game/` (deve existir `game/Engine`). Log do app: `/data/titans-of-the-tide.log`.
+1. Crie `.github/workflows/extract_zip.yml` (Add file → Create new file; cole `workflows/extract_zip.yml`).
+2. Envie este zip para a raiz do repo com o nome **`repo.zip`**. O workflow *Extrair repo.zip* espalha tudo na raiz.
+3. O Actions não cria workflows. Mova à mão `workflows/build_pkg.yml` para `.github/workflows/build_pkg.yml`
+   (abra o arquivo → lápis → troque o caminho no campo do nome → Commit).
+4. **Actions → Build PKG → Run workflow**, versão `00.03`. Baixe o artefato **ps4-pkg**. O **build-log** traz o `build.log`
+   e PNGs do menu.
+5. Instale o `.pkg` com o Package Installer do GoldHEN. Se o PS4 recusar por já ter versão igual ou maior, desinstale o antigo.
+6. Se algo falhar ao abrir, pegue por FTP `/data/Titans/logs/app.log` e mande junto com o `build.log`.
 
-## Patch gráfico (opcional)
-Coloque os `.ini` originais do jogo em `config/original/` (os que vêm no zip são só amostra) e rode
-**Actions → PS4 Patch**. O artefato `ps4-config-patched` traz `DefaultEngine.ini`, `Engine.ini` e `GameUserSettings.ini`.
+Arquivos de versões antigas (`workflows/ps4_patch.yml`, `scripts/apply_ue_cvars.py`, `config/`) continuam no seu repo, pois o
+extrator só adiciona e sobrescreve. Pode apagar.
 
-## Pastas
-- `app/` código do app (C) e `app/sce_sys/icon0.png`
-- `scripts/` toolchain, empacotador do `.pkg` e `apply_ue_cvars.py`
-- `workflows/` os 3 workflows (copiar para `.github/workflows/`)
-- `tools/` gerador da fonte e prévia do menu no PC
-- `config/original/` .ini originais do jogo
+## Pastas do projeto
+- `app/` código do app (C) e capa em `app/sce_sys/` (`icon0.png`, `pic1.png`)
+- `scripts/` toolchain e empacotador do `.pkg`
+- `workflows/` workflows (copiar para `.github/workflows/`)
+- `tools/` gerador da fonte, gerador da capa e prévia das telas no PC
