@@ -2,11 +2,11 @@
 
 Tudo roda no GitHub Actions; nada precisa de computador.
 
-## Estado real (leia primeiro)
+## Estado real (leia primeiro) — v00.02, veja CHANGELOG.md
 - **Funciona (a testar no seu PS4):** o app-menu. Gera um `.pkg` com tela própria, controle DualShock 4 e 3 botões:
   **Iniciar** (só habilita se existir `/data/titans-of-the-tide/game/Engine`), **Criar caminho** (cria a pasta do jogo) e **Exit**.
 - **Ainda não existe:** o runtime que abre o jogo. Rodar a UE5 do PC no PS4 exige uma camada Windows→PS4 e
-  D3D12/Vulkan→GPU do PS4 (veja o SMW como referência de escala). O botão **Iniciar** só avisa isso.
+  D3D12/Vulkan→GPU do PS4. O botão **Iniciar** só avisa isso.
 - **Patch gráfico:** o workflow `PS4 Patch` gera os `.ini` com 900p, render scale 75%, 30 FPS e Medium. Eles só têm efeito
   quando o runtime existir para aplicá-los.
 - O build nunca foi rodado fora do GitHub (o ambiente onde isto foi montado não tem a toolchain nem rede). Se a primeira

@@ -1,5 +1,5 @@
 /* Titans of the Tide (PS4): menu de teste. Tela por VideoOut (CPU) e controle por ScePad.
- * Partes (VideoOut em memoria direta write-combined, ScePad) seguem o runtime do SMW (iHaiDeeZ/SMW, MIT). */
+ * Video: buffers em memoria direta write-combined + sceVideoOut. Controle: ScePad. */
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -53,7 +53,7 @@ static int exists(const char* path) {
 }
 
 int main(void) {
-    logf_("start");
+    logf_("start v" APP_VERSION);
 
     sceUserServiceInitialize(NULL);
     scePadInit();

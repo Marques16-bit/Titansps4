@@ -2,6 +2,10 @@
 #pragma once
 #include <stdint.h>
 
+#ifndef APP_VERSION
+#define APP_VERSION "dev"
+#endif
+
 #define UI_W 1920
 #define UI_H 1080
 

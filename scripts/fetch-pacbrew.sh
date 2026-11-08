@@ -1,26 +1,69 @@
 #!/usr/bin/env bash
-# PacBrew's OpenOrbis toolchain and port libraries (every ps4-openorbis-* package of its pacman repository, the
-# toolchain SMW is built with: clang 12, ld.lld, create-fself, create-gp4, PkgTool, the OpenOrbis headers and libc),
-# unpacked into <root>/opt/pacbrew without pacman. Each package is checked against the repository's SHA-256.
-#   fetch-pacbrew.sh [root, default /]      (needs write access to <root>/opt)
+# Baixa a toolchain OpenOrbis do PacBrew (pacotes ps4-openorbis-*) e descompacta em <raiz>/opt/pacbrew, sem pacman.
+# Cada pacote e conferido pelo SHA-256 que consta no banco do repositorio.
+#   fetch-pacbrew.sh [raiz, padrao /]     (precisa de escrita em <raiz>/opt)
 set -euo pipefail
-ROOT="${1:-/}"
-REPO="${PACBREW_REPO:-https://pacman.mydedibox.fr/pacbrew/packages}"
-T="$(mktemp -d)"
-trap 'rm -rf "$T"' EXIT
-curl -fsSL "$REPO/pacbrew.db" -o "$T/pacbrew.db"
-mkdir -p "$T/db"
-tar -xf "$T/pacbrew.db" -C "$T/db"
-field() { awk -v k="%$2%" '$0 == k { getline; print; exit }' "$1/desc"; }
-n=0
-for d in "$T"/db/ps4-openorbis-*/; do
-    f="$(field "$d" FILENAME)"; sum="$(field "$d" SHA256SUM)"
-    echo "pacbrew: $f"
-    curl -fsSL "$REPO/$f" -o "$T/$f"
-    echo "$sum  $T/$f" | sha256sum -c --quiet - || { echo "pacbrew: $f does not match the repository's checksum" >&2; exit 1; }
-    tar -xf "$T/$f" -C "$ROOT" --exclude=.PKGINFO --exclude=.MTREE --exclude=.BUILDINFO --exclude=.INSTALL
-    rm -f "$T/$f"
-    n=$((n + 1))
-done
-[ "$n" -gt 0 ] || { echo "pacbrew: no ps4-openorbis packages in $REPO" >&2; exit 1; }
-echo "pacbrew: $n packages in $ROOT/opt/pacbrew/ps4/openorbis"
+exec python3 - "${1:-/}" <<'PY'
+import glob
+import hashlib
+import os
+import subprocess
+import sys
+import tempfile
+import urllib.request
+
+root = sys.argv[1]
+repo = os.environ.get("PACBREW_REPO", "https://pacman.mydedibox.fr/pacbrew/packages").rstrip("/")
+
+
+def download(name, dest):
+    with urllib.request.urlopen(repo + "/" + name, timeout=120) as resp, open(dest, "wb") as out:
+        while True:
+            block = resp.read(1 << 20)
+            if not block:
+                break
+            out.write(block)
+
+
+def sha256_of(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def field(desc_text, key):
+    lines = desc_text.splitlines()
+    return lines[lines.index("%" + key + "%") + 1].strip()
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    db = os.path.join(tmp, "pacbrew.db")
+    db_dir = os.path.join(tmp, "db")
+    os.makedirs(db_dir)
+    download("pacbrew.db", db)
+    subprocess.run(["tar", "-xf", db, "-C", db_dir], check=True)
+
+    done = 0
+    for entry in sorted(glob.glob(os.path.join(db_dir, "ps4-openorbis-*"))):
+        desc = os.path.join(entry, "desc")
+        if not os.path.isfile(desc):
+            continue
+        with open(desc) as f:
+            text = f.read()
+        name, expected = field(text, "FILENAME"), field(text, "SHA256SUM")
+        print("pacbrew:", name, flush=True)
+        pkg = os.path.join(tmp, name)
+        download(name, pkg)
+        if sha256_of(pkg) != expected:
+            sys.exit("pacbrew: %s nao confere com o SHA-256 do repositorio" % name)
+        subprocess.run(["tar", "-xf", pkg, "-C", root, "--exclude=.PKGINFO", "--exclude=.MTREE",
+                        "--exclude=.BUILDINFO", "--exclude=.INSTALL"], check=True)
+        os.remove(pkg)
+        done += 1
+
+    if not done:
+        sys.exit("pacbrew: nenhum pacote ps4-openorbis-* em " + repo)
+    print("pacbrew: %d pacotes em %s/opt/pacbrew/ps4/openorbis" % (done, root.rstrip("/")))
+PY

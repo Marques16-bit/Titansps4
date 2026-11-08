@@ -52,7 +52,7 @@ void ui_draw(uint32_t* fb, const UiState* st) {
     /* cabecalho */
     rect(fb, 0, 0, UI_W, 150, RGB(8, 22, 56));
     text_centered(fb, UI_W / 2, 28, 3, white, "SpongeBob SquarePants: Titans of the Tide");
-    text_centered(fb, UI_W / 2, 98, 2, yellow, "PS4 port - early test build");
+    text_centered(fb, UI_W / 2, 98, 2, yellow, "PS4 port - test build v" APP_VERSION);
 
     /* painel de status */
     rect(fb, 354, 204, 1212, 182, yellow);

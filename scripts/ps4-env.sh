@@ -1,21 +1,31 @@
-# Usar com: source scripts/ps4-env.sh
-# Adaptado de scripts/ps4-env.sh do SMW (iHaiDeeZ/SMW, MIT): toolchain OpenOrbis do PacBrew (clang 12, ld.lld, create-fself).
+# Uso: source scripts/ps4-env.sh
+# Carrega a toolchain OpenOrbis (PacBrew) e define cmake_ps4, o cmake ja apontado para a toolchain do PS4.
 OPENORBIS="${OPENORBIS:-/opt/pacbrew/ps4/openorbis}"
 export OPENORBIS
+if [ ! -f "$OPENORBIS/ps4vars.sh" ]; then
+    echo "toolchain nao encontrada em $OPENORBIS (rode: sudo bash scripts/fetch-pacbrew.sh /)" >&2
+    return 1
+fi
 # shellcheck disable=SC1091
 source "$OPENORBIS/ps4vars.sh"
-# O ld.lld do PacBrew liga com libxml2.so.2; distros novas so tem libxml2.so.16 (mesma API): link de compatibilidade.
-if ldd "$OPENORBIS/bin/ld.lld" | grep -q "libxml2.so.2 => not found"; then
-    compat=$(ls /usr/lib/x86_64-linux-gnu/libxml2.so.* 2>/dev/null | grep -E 'libxml2\.so\.[0-9]+$' | head -1)
-    if [ -n "$compat" ]; then
-        mkdir -p "$HOME/ps4-host-compat"
-        ln -sf "$compat" "$HOME/ps4-host-compat/libxml2.so.2"
-        export LD_LIBRARY_PATH="$HOME/ps4-host-compat${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    fi
+
+# O ld.lld do PacBrew pede libxml2.so.2; distribuicoes novas trazem a mesma biblioteca com outro numero.
+if ldd "$OPENORBIS/bin/ld.lld" 2>/dev/null | grep -q 'libxml2.so.2 => not found'; then
+    for lib in /usr/lib/x86_64-linux-gnu/libxml2.so.*; do
+        case "$lib" in
+            *.so.[0-9] | *.so.[0-9][0-9])
+                mkdir -p "$HOME/ps4-host-compat"
+                ln -sf "$lib" "$HOME/ps4-host-compat/libxml2.so.2"
+                export LD_LIBRARY_PATH="$HOME/ps4-host-compat${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                break
+                ;;
+        esac
+    done
 fi
-# ps4vars.sh exporta CFLAGS/LDFLAGS para makefiles; o CMake os somaria aos flags da toolchain: limpa para o CMake.
-ps4_cmake() {
+
+# O ps4vars.sh exporta flags para makefiles; o cmake os somaria aos da toolchain, entao saem do ambiente dele.
+cmake_ps4() {
     env -u CFLAGS -u CXXFLAGS -u CPPFLAGS -u LDFLAGS -u LIBS \
-        cmake -DCMAKE_TOOLCHAIN_FILE="$OPENORBIS/cmake/ps4.cmake" -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 "$@"
+        cmake -DCMAKE_TOOLCHAIN_FILE="$OPENORBIS/cmake/ps4.cmake" \
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 "$@"
 }

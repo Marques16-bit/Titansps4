@@ -10,8 +10,10 @@ source "$ROOT/scripts/ps4-env.sh"
 BUILD="$ROOT/build"
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
-ps4_cmake -S "$ROOT/app" -B "$BUILD"
+cmake_ps4 -S "$ROOT/app" -B "$BUILD" -DAPP_VERSION="$VERSION"
 cmake --build "$BUILD" --parallel
+command -v readelf >/dev/null && readelf -d "$BUILD/titans_eboot/titans.oelf" | grep -E 'NEEDED|SONAME' || true
+python3 "$ROOT/scripts/check_oelf.py" "$BUILD/titans_eboot/titans.oelf"
 EBOOT="$BUILD/titans_eboot/eboot.bin"
 [ -f "$EBOOT" ] || { echo "eboot.bin nao foi gerado" >&2; exit 1; }
 
