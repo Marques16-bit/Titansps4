@@ -5,7 +5,7 @@ on:
     inputs:
       version:
         description: 'Versão do pacote (XX.YY)'
-        default: '01.00'
+        default: '00.03'
 
 jobs:
   build:
@@ -36,9 +36,11 @@ jobs:
           gcc -O2 -Iapp/src tools/preview.c app/src/ui.c -o /tmp/preview
           /tmp/preview /tmp/a.ppm sel=0
           /tmp/preview /tmp/b.ppm ready sel=0
+          /tmp/preview /tmp/c.ppm settings set=8 overlay
+          /tmp/preview /tmp/d.ppm log
           python3 - <<'PY'
           from PIL import Image
-          for n in ("a", "b"):
+          for n in ("a", "b", "c", "d"):
               Image.open(f"/tmp/{n}.ppm").save(f"out/preview/menu_{n}.png")
           PY
 
