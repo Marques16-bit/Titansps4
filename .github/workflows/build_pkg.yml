@@ -1,0 +1,66 @@
+name: Build PKG
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão do pacote (XX.YY)'
+        default: '01.00'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Dependências
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake curl xz-utils python3 python3-pil libxml2 binutils
+
+      - name: Toolchain OpenOrbis (PacBrew)
+        run: sudo bash scripts/fetch-pacbrew.sh /
+
+      - name: Diagnóstico da toolchain
+        run: |
+          ls /opt/pacbrew/ps4/openorbis
+          ls /opt/pacbrew/ps4/openorbis/bin | head -40
+          ldd /opt/pacbrew/ps4/openorbis/bin/ld.lld | grep "not found" || echo "ld.lld: bibliotecas ok"
+
+      - name: Preview do menu (PNG)
+        continue-on-error: true
+        run: |
+          mkdir -p out/preview
+          gcc -O2 -Iapp/src tools/preview.c app/src/ui.c -o /tmp/preview
+          /tmp/preview /tmp/a.ppm sel=0
+          /tmp/preview /tmp/b.ppm ready sel=0
+          python3 - <<'PY'
+          from PIL import Image
+          for n in ("a", "b"):
+              Image.open(f"/tmp/{n}.ppm").save(f"out/preview/menu_{n}.png")
+          PY
+
+      - name: Compilar e gerar o .pkg
+        shell: bash
+        env:
+          PKG_VERSION: ${{ inputs.version }}
+        run: bash scripts/build-pkg.sh 2>&1 | tee build.log
+
+      - name: Salvar .pkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps4-pkg
+          path: out/*.pkg
+          if-no-files-found: error
+
+      - name: Salvar log e preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: |
+            build.log
+            out/preview/
+          if-no-files-found: ignore

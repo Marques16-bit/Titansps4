@@ -1,0 +1,79 @@
+name: PS4 Patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      width:
+        description: 'Largura (900p = 1600)'
+        default: '1600'
+      height:
+        description: 'Altura'
+        default: '900'
+      screen_percentage:
+        description: 'Render scale 3D em % (75 = 25% a menos)'
+        default: '75'
+      max_fps:
+        description: 'Limite de FPS'
+        default: '30'
+      texture_quality:
+        description: 'sg.TextureQuality (1 = Medium)'
+        default: '1'
+      shadow_quality:
+        description: 'sg.ShadowQuality (0-4)'
+        default: '1'
+      ssr_quality:
+        description: 'r.SSR.Quality (0-4)'
+        default: '2'
+      bloom_quality:
+        description: 'r.BloomQuality (0-5)'
+        default: '3'
+      texture_pool_mb:
+        description: 'r.Streaming.PoolSize em MB'
+        default: '1024'
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS4_WIDTH: ${{ inputs.width }}
+      PS4_HEIGHT: ${{ inputs.height }}
+      PS4_SCREEN_PERCENTAGE: ${{ inputs.screen_percentage }}
+      PS4_MAX_FPS: ${{ inputs.max_fps }}
+      PS4_TEXTURE_QUALITY: ${{ inputs.texture_quality }}
+      PS4_SHADOW_QUALITY: ${{ inputs.shadow_quality }}
+      PS4_SSR_QUALITY: ${{ inputs.ssr_quality }}
+      PS4_BLOOM_QUALITY: ${{ inputs.bloom_quality }}
+      PS4_TEXTURE_POOL_MB: ${{ inputs.texture_pool_mb }}
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Conferir arquivos
+        run: |
+          ls config/original/*.ini >/dev/null 2>&1 || { echo "::error::Coloque os .ini originais em config/original/"; exit 1; }
+          [ -f scripts/apply_ue_cvars.py ] || { echo "::error::Falta scripts/apply_ue_cvars.py"; exit 1; }
+
+      - name: Copiar configs originais
+        run: |
+          rm -rf build/config
+          mkdir -p build/config
+          cp config/original/*.ini build/config/
+
+      - name: Aplicar 900p / 75% / 30 FPS
+        run: python scripts/apply_ue_cvars.py build/config
+
+      - name: Mostrar mudanças
+        run: diff -ru config/original build/config || true
+
+      - name: Salvar resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps4-config-patched
+          path: build/config/
+          if-no-files-found: error
