@@ -2,7 +2,7 @@
 
 Tudo roda no GitHub Actions; nada precisa de computador.
 
-## Estado real (v00.03, veja CHANGELOG.md)
+## Estado real (v00.04, veja CHANGELOG.md)
 - **O app:** abre com capa e menu vertical **Start / Settings / Log / Exit** (controle DualShock 4).
 - **Settings:** opções de vídeo (resolução, render scale, limite de FPS, VSync, texturas, sombras, bloom, SSR, anti-aliasing),
   overlay (FPS, RAM, temperatura, armazenamento), áudio, controles e sistema. Ficam em `/data/Titans/config/settings.ini`.
@@ -26,9 +26,9 @@ Tudo roda no GitHub Actions; nada precisa de computador.
 2. Envie este zip para a raiz do repo com o nome **`repo.zip`**. O workflow *Extrair repo.zip* espalha tudo na raiz.
 3. O Actions não cria workflows. Mova à mão `workflows/build_pkg.yml` para `.github/workflows/build_pkg.yml`
    (abra o arquivo → lápis → troque o caminho no campo do nome → Commit).
-4. **Actions → Build PKG → Run workflow**, versão `00.03`. Baixe o artefato **ps4-pkg**. O **build-log** traz o `build.log`
+4. **Actions → Build PKG → Run workflow**, versão `00.04`. Baixe o artefato **ps4-pkg**: ele traz dois pacotes, `-A.pkg` e `-B.pkg` (assinaturas diferentes; o título no menu do PS4 mostra (A) ou (B)). O **build-log** traz o `build.log`
    e PNGs do menu.
-5. Instale o `.pkg` com o Package Installer do GoldHEN. Se o PS4 recusar por já ter versão igual ou maior, desinstale o antigo.
+5. Instale o `-A.pkg` com o Package Installer do GoldHEN. Se ainda fechar sozinho, instale o `-B.pkg` por cima. Se o PS4 recusar por já ter versão igual ou maior, desinstale o antigo.
 6. Se algo falhar ao abrir, pegue por FTP `/data/Titans/logs/app.log` e mande junto com o `build.log`.
 
 Arquivos de versões antigas (`workflows/ps4_patch.yml`, `scripts/apply_ue_cvars.py`, `config/`) continuam no seu repo, pois o

@@ -1,5 +1,10 @@
 # Changelog
 
+## v00.04
+- O app ainda fechava sozinho: o `eboot.bin` agora é assinado com PAID e authinfo explícitos (o padrão da ferramenta não
+  garante acesso aos módulos de vídeo e controle). O artefato traz duas variantes: A (PAID 0x31...02 + authinfo) e
+  B (PAID 0x38...11, o dos exemplos OpenOrbis). O título do app no PS4 mostra (A) ou (B).
+
 ## v00.03
 - Corrige o app que abria e fechava sozinho: agora carrega os módulos do sistema (SystemService, UserService, VideoOut, Pad)
   antes de usá-los. Chamar uma biblioteca sem o módulo carregado fecha o app sem mensagem.
