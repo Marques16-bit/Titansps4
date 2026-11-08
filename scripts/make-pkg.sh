@@ -18,29 +18,26 @@ for f in eboot.bin sce_sys/icon0.png; do
     [ -f "$STAGE/$f" ] || { echo "falta $STAGE/$f" >&2; exit 1; }
 done
 
-# libc.prx e libSceFios2.prx precisam ir em sce_module/. Sem eles o PS4 recusa o app com "dados corrompidos".
+# Modulos do OpenOrbis em sce_module/ (libc.prx, libSceFios2.prx): copiados da pasta de exemplo da toolchain.
+# Sem eles o PS4 recusa o app. (right.sprx nao e usado.)
 mkdir -p "$STAGE/sce_module"
+SAMPLE_MODULES="$OPENORBIS/samples/piglet/sce_module"
+if compgen -G "$SAMPLE_MODULES/*.prx" >/dev/null; then
+    cp "$SAMPLE_MODULES"/*.prx "$STAGE/sce_module/"
+else
+    for prx in libc.prx libSceFios2.prx; do
+        src="$(find "$OPENORBIS" -path "*/sce_module/$prx" -print -quit 2>/dev/null || true)"
+        [ -n "$src" ] && cp "$src" "$STAGE/sce_module/$prx"
+    done
+fi
 for prx in libc.prx libSceFios2.prx; do
-    src="$(find "$OPENORBIS" -path "*/sce_module/$prx" -print -quit 2>/dev/null || true)"
-    [ -n "$src" ] || src="$(find "$OPENORBIS" -name "$prx" -print -quit 2>/dev/null || true)"
-    if [ -z "$src" ]; then
+    if [ ! -f "$STAGE/sce_module/$prx" ]; then
         echo "erro: $prx nao esta na toolchain ($OPENORBIS). Modulos .prx encontrados:" >&2
         find "$OPENORBIS" -name '*.prx' >&2 || true
         exit 1
     fi
-    cp "$src" "$STAGE/sce_module/$prx"
-    echo "sce_module/$prx <- $src" >&2
 done
-
-# right.sprx (sce_sys/about) faz parte do pacote padrao do OpenOrbis; entra se a toolchain trouxer.
-right="$(find "$OPENORBIS" -path '*/sce_sys/about/right.sprx' -print -quit 2>/dev/null || true)"
-if [ -n "$right" ]; then
-    mkdir -p "$STAGE/sce_sys/about"
-    cp "$right" "$STAGE/sce_sys/about/right.sprx"
-    echo "sce_sys/about/right.sprx <- $right" >&2
-else
-    echo "aviso: right.sprx nao encontrado na toolchain (seguindo sem ele)" >&2
-fi
+echo "sce_module: $(ls "$STAGE/sce_module" | tr '\n' ' ')" >&2
 
 # CONTENT_ID = IV0000-<TITLE_ID>_00-<rotulo de 16 caracteres, completado com 0>
 label="$(printf '%s' "$LABEL" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9' | cut -c1-16)"

@@ -30,6 +30,23 @@ extern int32_t tp_map_direct(void** addr, size_t len, int32_t prot, int32_t flag
 extern size_t tp_direct_size(void) __asm__("sceKernelGetDirectMemorySize");
 extern int32_t tp_load_module(uint32_t id) __asm__("sceSysmoduleLoadModuleInternal");
 
+#ifdef HAVE_KERNEL_NOTIFY
+/* Aviso na tela do PS4 (toast): mostra ate onde a inicializacao chegou, mesmo se o app morrer logo depois. */
+extern int ti_notify(int type, void* request, size_t size, int blocking) __asm__("sceKernelSendNotificationRequest");
+static struct { char pad[45]; char message[3075]; } g_notify; /* 3120 bytes, formato esperado pelo sistema */
+static void toast(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    memset(&g_notify, 0, sizeof g_notify);
+    vsnprintf(g_notify.message, 200, fmt, ap);
+    va_end(ap);
+    ti_notify(0, &g_notify, sizeof g_notify, 0);
+}
+#else
+static void toast(const char* fmt, ...) { (void)fmt; }
+#endif
+
+#define FIRST_BUFFER 12         /* indice do primeiro buffer registrado no VideoOut */
 #define BUFFER_SIZE (8u << 20)  /* 1920x1080x4 arredondado para paginas de 2 MiB */
 #define WC_GARLIC 3             /* memoria write-combined que o display le */
 #define PROT_CPU_GPU 0x33       /* CPU e GPU leem/escrevem */
@@ -65,6 +82,7 @@ static void make_folders(void) {
 /* signal() padrao: o signal.h do OpenOrbis tem o macro sa_sigaction com o nome de campo errado e nao compila. */
 static void crash_handler(int sig) {
     logf_("CRASH signal %d", sig);
+    toast("Titans: CRASH sinal %d", sig);
     signal(sig, SIG_DFL);
     raise(sig);
 }
@@ -126,25 +144,27 @@ int main(void) {
         logf_("settings.ini criado com os padroes");
     }
 
+    toast("Titans v" APP_VERSION ": iniciou");
     load_system_modules();
-    sceUserServiceInitialize(NULL);
-    scePadInit();
-    int32_t user = -1;
-    if (sceUserServiceGetInitialUser(&user) != 0) user = -1;
-    int pad = scePadOpen(user, ORBIS_PAD_PORT_TYPE_STANDARD, 0, NULL);
-    logf_("pad handle %d (user %08x)", pad, (unsigned)user);
+    toast("Titans: modulos carregados");
 
     int video = sceVideoOutOpen(0xFF, 0, 0, NULL);
     if (video < 0) {
         logf_("sceVideoOutOpen failed: %x", (unsigned)video);
+        toast("Titans: erro VideoOut %x", (unsigned)video);
         return 1;
     }
+    OrbisKernelEqueue flip_queue;
+    int32_t rq = sceKernelCreateEqueue(&flip_queue, "titans flip");
+    int32_t re = rq == 0 ? sceVideoOutAddFlipEvent(flip_queue, video, NULL) : -1;
+    logf_("flip queue: create %x add %x", (unsigned)rq, (unsigned)re);
     off_t phys = 0;
     void* base = NULL;
     int32_t ra = tp_alloc_direct(0, (off_t)tp_direct_size(), 2 * BUFFER_SIZE, 2u << 20, WC_GARLIC, &phys);
     int32_t rm = ra == 0 ? tp_map_direct(&base, 2 * BUFFER_SIZE, PROT_CPU_GPU, 0, phys, 2u << 20) : -1;
     if (ra != 0 || rm != 0) {
         logf_("direct memory failed: alloc %x map %x", (unsigned)ra, (unsigned)rm);
+        toast("Titans: erro de memoria %x %x", (unsigned)ra, (unsigned)rm);
         return 1;
     }
     uint8_t* buffers[2] = {(uint8_t*)base, (uint8_t*)base + BUFFER_SIZE};
@@ -152,12 +172,21 @@ int main(void) {
     OrbisVideoOutBufferAttribute attribute;
     sceVideoOutSetBufferAttribute(&attribute, ORBIS_VIDEO_OUT_PIXEL_FORMAT_A8B8G8R8_SRGB,
                                   ORBIS_VIDEO_OUT_TILING_MODE_LINEAR, 0, UI_W, UI_H, UI_W);
-    int reg = sceVideoOutRegisterBuffers(video, 0, addresses, 2, &attribute);
+    int reg = sceVideoOutRegisterBuffers(video, FIRST_BUFFER, addresses, 2, &attribute);
     if (reg < 0) {
         logf_("sceVideoOutRegisterBuffers failed: %x", (unsigned)reg);
+        toast("Titans: erro RegisterBuffers %x", (unsigned)reg);
         return 1;
     }
     logf_("video ready");
+    toast("Titans: video ok");
+
+    sceUserServiceInitialize(NULL);
+    scePadInit();
+    int32_t user = -1;
+    if (sceUserServiceGetInitialUser(&user) != 0) user = -1;
+    int pad = scePadOpen(user, ORBIS_PAD_PORT_TYPE_STANDARD, 0, NULL);
+    logf_("pad handle %d (user %08x)", pad, (unsigned)user);
 
     static SysInfo sys;
     sysinfo_init(&sys);
@@ -259,8 +288,11 @@ int main(void) {
         ui_draw(g_frame, &st);
         memcpy(buffers[k], g_frame, sizeof g_frame);
         __atomic_thread_fence(__ATOMIC_SEQ_CST); /* stores write-combined saem antes do flip */
-        sceVideoOutSubmitFlip(video, k, ORBIS_VIDEO_OUT_FLIP_VSYNC, 0);
-        if (frame == 0) sceSystemServiceHideSplashScreen();
+        sceVideoOutSubmitFlip(video, FIRST_BUFFER + k, ORBIS_VIDEO_OUT_FLIP_VSYNC, 0);
+        if (frame == 0) {
+            sceSystemServiceHideSplashScreen();
+            toast("Titans: menu rodando");
+        }
         k ^= 1;
         sceKernelUsleep(16000); /* o outro buffer ja saiu da tela */
     }

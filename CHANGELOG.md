@@ -1,5 +1,12 @@
 # Changelog
 
+## v00.05
+- Volta a gerar um único `.pkg`.
+- Sequência de inicialização do vídeo igual à do app de referência: módulos → VideoOut → fila de eventos de flip →
+  buffers a partir do índice 12 → só depois UserService/Pad.
+- Módulos do sistema copiados da pasta de exemplo da toolchain; `right.sprx` removido do pacote.
+- Avisos na tela (toasts) a cada etapa da inicialização e no crash, quando a toolchain permite (`build.log`: `probe`).
+
 ## v00.04
 - O app ainda fechava sozinho: o `eboot.bin` agora é assinado com PAID e authinfo explícitos (o padrão da ferramenta não
   garante acesso aos módulos de vídeo e controle). O artefato traz duas variantes: A (PAID 0x31...02 + authinfo) e

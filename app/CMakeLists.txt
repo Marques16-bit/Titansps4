@@ -10,7 +10,7 @@ target_compile_definitions(titans PRIVATE APP_VERSION="${APP_VERSION}")
 target_link_libraries(titans PRIVATE SceVideoOut ScePad SceUserService SceSystemService SceSysmodule)
 
 # APIs opcionais do kernel: build-pkg.sh passa -DHAVE_...=1 so quando a toolchain exporta o simbolo
-foreach(feat HAVE_KERNEL_CPU_TEMP HAVE_KERNEL_SOC_TEMP HAVE_KERNEL_STATFS)
+foreach(feat HAVE_KERNEL_CPU_TEMP HAVE_KERNEL_SOC_TEMP HAVE_KERNEL_STATFS HAVE_KERNEL_NOTIFY)
     if(${feat})
         target_compile_definitions(titans PRIVATE ${feat}=1)
     endif()
