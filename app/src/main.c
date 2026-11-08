@@ -62,9 +62,9 @@ static void make_folders(void) {
     for (unsigned i = 0; i < sizeof dirs / sizeof dirs[0]; i++) mkdir(dirs[i], 0777);
 }
 
-static void crash_handler(int sig, siginfo_t* info, void* ctx) {
-    (void)ctx;
-    logf_("CRASH signal %d at %p", sig, info ? info->si_addr : NULL);
+/* signal() padrao: o signal.h do OpenOrbis tem o macro sa_sigaction com o nome de campo errado e nao compila. */
+static void crash_handler(int sig) {
+    logf_("CRASH signal %d", sig);
     signal(sig, SIG_DFL);
     raise(sig);
 }
@@ -114,13 +114,9 @@ int main(void) {
     remove(LOG_PREV);
     rename(LOG_FILE, LOG_PREV);
     logf_("start v" APP_VERSION);
-    struct sigaction sa;
-    memset(&sa, 0, sizeof sa);
-    sa.sa_sigaction = crash_handler;
-    sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGSEGV, &sa, NULL);
-    sigaction(SIGBUS, &sa, NULL);
-    sigaction(SIGILL, &sa, NULL);
+    signal(SIGSEGV, crash_handler);
+    signal(SIGBUS, crash_handler);
+    signal(SIGILL, crash_handler);
     make_folders();
 
     static Settings settings;

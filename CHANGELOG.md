@@ -7,7 +7,7 @@
 - Settings com 23 opções (vídeo, overlay, áudio, controles, sistema) salvas em `/data/Titans/config/settings.ini`.
 - Overlay opcional: FPS, RAM, temperatura e armazenamento. Tela Log com a execução atual e a anterior.
 - Estrutura de pastas `/data/Titans/{game,config,logs,saves,cache/shaders}`, criada ao abrir.
-- Log de falhas: registra cada etapa da inicialização e o sinal de crash (SIGSEGV etc.).
+- Log de falhas: registra cada etapa da inicialização e o sinal de crash (SIGSEGV etc.), via `signal()` padrão.
 - O pacote leva também `sce_sys/about/right.sprx` quando a toolchain traz.
 - Removido o patch de `.ini` (workflow, script e `config/`).
 
