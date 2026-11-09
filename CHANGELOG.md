@@ -1,5 +1,11 @@
 # Changelog
 
+## v00.07
+- Runtime, fase 1: **Start** agora analisa o jogo (acha o `.exe`, lê o PE x64, lista DLLs/funções importadas, detecta
+  D3D12/D3D11/Vulkan e middlewares, mede a pasta) e grava `/data/Titans/logs/runtime_report.txt`.
+- Listagem de pastas sem `malloc` (`sceKernelGetdents`), com `game.ini` (`exe=`) como alternativa.
+- `RUNTIME.md` com o roteiro das fases do runtime.
+
 ## v00.06
 - Causa do app fechar sozinho: o `malloc` padrão do OpenOrbis reserva um bloco enorme de memória na primeira alocação e
   derruba o app quando isso falha (acontece em alguns firmwares). O `fopen` aloca memória, então o app caía já no primeiro

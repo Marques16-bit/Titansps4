@@ -19,6 +19,7 @@
 #include <orbis/VideoOut.h>
 #include <orbis/libkernel.h>
 
+#include "gamescan.h"
 #include "paths.h"
 #include "settings.h"
 #include "sysinfo.h"
@@ -206,6 +207,9 @@ int main(void) {
     st.sys = &sys;
     st.log_text = g_log;
     st.game_ready = exists(GAME_MARK);
+    static GameReport game;
+    st.game = &game;
+    int scan_state = 0; /* 1 = pedido (desenha "analisando"), 2 = roda a analise no proximo quadro */
 
     uint32_t prev = 0;
     int held[4] = {0, 0, 0, 0}; /* UP DOWN LEFT RIGHT: repeticao ao segurar */
@@ -238,9 +242,10 @@ int main(void) {
             if (cross) {
                 st.message = NULL;
                 if (st.selected == MENU_START) {
-                    st.message = st.game_ready ? "Runtime do jogo ainda nao implementado (fase 3)"
-                                               : "Jogo nao encontrado: copie os arquivos para " GAME_DIR;
-                    logf_("start pressed (game_ready=%d)", st.game_ready);
+                    logf_("start pressed: analisando o jogo (runtime fase 1)");
+                    st.screen = SCREEN_GAME;
+                    st.game_busy = 1;
+                    scan_state = 1;
                 } else if (st.selected == MENU_SETTINGS) {
                     st.screen = SCREEN_SETTINGS;
                 } else if (st.selected == MENU_LOG) {
@@ -252,6 +257,9 @@ int main(void) {
                     quit = 1;
                 }
             }
+        } else if (st.screen == SCREEN_GAME) {
+            if (cross && !st.game_busy) { st.game_busy = 1; scan_state = 1; }
+            if (circle) st.screen = SCREEN_MAIN;
         } else if (st.screen == SCREEN_SETTINGS) {
             if (up) st.set_sel = (st.set_sel + S_COUNT) % (S_COUNT + 1);
             if (down) st.set_sel = (st.set_sel + 1) % (S_COUNT + 1);
@@ -281,6 +289,13 @@ int main(void) {
             if (circle) st.screen = SCREEN_MAIN;
         }
 
+        if (scan_state == 2) {
+            gamescan_run(&game, GAME_DIR, GAME_INI, REPORT_FILE);
+            logf_("analise: exe=%s pe_ok=%d dlls=%d funcs=%d arquivos=%d", game.exe[0] ? game.exe : "-", game.pe.ok, game.pe.dlls,
+                  game.pe.funcs, game.files);
+            st.game_busy = 0;
+            scan_state = 0;
+        }
         double t = now_sec();
         frames++;
         if (t - t_fps >= 0.5) {
@@ -302,6 +317,7 @@ int main(void) {
             toast("Titans: menu rodando");
         }
         k ^= 1;
+        if (scan_state == 1) scan_state = 2;
         sceKernelUsleep(16000); /* o outro buffer ja saiu da tela */
     }
     logf_("exit");

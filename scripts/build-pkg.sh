@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Compila o app e gera um .pkg (eboot assinado como em app/cmake/eboot.cmake):  PKG_VERSION=00.06 bash scripts/build-pkg.sh
+# Compila o app e gera um .pkg (eboot assinado como em app/cmake/eboot.cmake):  PKG_VERSION=00.07 bash scripts/build-pkg.sh
 # Pre-requisito: toolchain em /opt/pacbrew (sudo bash scripts/fetch-pacbrew.sh /).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${PKG_VERSION:-00.06}"
+VERSION="${PKG_VERSION:-00.07}"
 TITLE_ID="${PKG_TITLE_ID:-TITA00001}"
 source "$ROOT/scripts/ps4-env.sh"
 
@@ -21,7 +21,7 @@ probe_symbol() {
     return 1
 }
 FEATURES=()
-for pair in HAVE_KERNEL_CPU_TEMP:sceKernelGetCpuTemperature HAVE_KERNEL_SOC_TEMP:sceKernelGetSocSensorTemperature HAVE_KERNEL_STATFS:statfs HAVE_KERNEL_NOTIFY:sceKernelSendNotificationRequest; do
+for pair in HAVE_KERNEL_CPU_TEMP:sceKernelGetCpuTemperature HAVE_KERNEL_SOC_TEMP:sceKernelGetSocSensorTemperature HAVE_KERNEL_STATFS:statfs HAVE_KERNEL_NOTIFY:sceKernelSendNotificationRequest HAVE_KERNEL_GETDENTS:sceKernelGetdents; do
     flag="${pair%%:*}"; sym="${pair##*:}"
     if probe_symbol "$sym"; then FEATURES+=("-D$flag=1"); echo "probe $sym: sim"; else echo "probe $sym: nao (o app mostra n/a)"; fi
 done

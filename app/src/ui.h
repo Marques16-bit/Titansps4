@@ -2,6 +2,7 @@
 #pragma once
 #include <stdint.h>
 
+#include "gamescan.h"
 #include "settings.h"
 #include "sysinfo.h"
 
@@ -12,7 +13,7 @@
 #define UI_W 1920
 #define UI_H 1080
 
-enum { SCREEN_MAIN = 0, SCREEN_SETTINGS = 1, SCREEN_LOG = 2 };
+enum { SCREEN_MAIN = 0, SCREEN_SETTINGS = 1, SCREEN_LOG = 2, SCREEN_GAME = 3 };
 enum { MENU_START = 0, MENU_SETTINGS = 1, MENU_LOG = 2, MENU_EXIT = 3, MENU_COUNT = 4 };
 
 typedef struct {
@@ -26,6 +27,8 @@ typedef struct {
     const char* log_text;       /* conteudo do log (NUL-terminado) */
     const Settings* settings;
     const SysInfo* sys;
+    const GameReport* game;     /* resultado da analise (fase 1 do runtime) */
+    int game_busy;              /* 1 = analisando */
 } UiState;
 
 /* fb: UI_W x UI_H pixels, bytes R,G,B,A na memoria (uint32 little-endian 0xAABBGGRR). */

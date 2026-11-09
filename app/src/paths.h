@@ -15,3 +15,6 @@
 #define CACHE_DIR     TITANS_ROOT "/cache"
 #define SHADER_DIR    CACHE_DIR "/shaders"             /* cache de shaders */
 #define GAME_MARK     GAME_DIR "/Engine"               /* todo jogo UE empacotado tem Engine/ na raiz */
+
+#define GAME_INI      CONFIG_DIR "/game.ini"           /* opcional: exe=caminho/relativo/ao/game.exe */
+#define REPORT_FILE   LOGS_DIR "/runtime_report.txt"   /* relatorio da analise do jogo */

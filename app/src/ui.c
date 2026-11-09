@@ -263,6 +263,77 @@ static void screen_settings(uint32_t* fb, const UiState* st) {
     text_centered(fb, UI_W / 2, 1010, 2, GRAY, "Left/Right: change    Cross: next    Circle: back");
 }
 
+
+static void fmt_size(char* out, size_t n, int64_t bytes) {
+    if (bytes < 0) { snprintf(out, n, "n/a"); return; }
+    unsigned long long b = (unsigned long long)bytes;
+    if (b < (1ull << 20)) { snprintf(out, n, "%llu KB", b >> 10); return; }
+    if (b >= (1ull << 30)) snprintf(out, n, "%llu.%02llu GB", b >> 30, (b % (1ull << 30)) * 100 / (1ull << 30));
+    else snprintf(out, n, "%llu.%llu MB", b >> 20, (b % (1ull << 20)) * 10 / (1ull << 20));
+}
+
+static const char* yes_no(int v) { return v ? "yes" : "no"; }
+
+static void screen_game(uint32_t* fb, const UiState* st) {
+    header(fb, 110);
+    text(fb, 60, 30, 3, WHITE, "Game analysis");
+    text_right(fb, UI_W - 60, 40, 2, YELLOW, "runtime phase 1");
+    rect_alpha(fb, 40, 130, 1840, 840, PANEL, 225);
+    const GameReport* g = st->game;
+    if (st->game_busy || !g || !g->done) {
+        text_centered(fb, UI_W / 2, 500, 3, WHITE, "Analyzing game files...");
+        text_centered(fb, UI_W / 2, 570, 2, GRAY, "this can take a few seconds");
+        return;
+    }
+    char a[64], b[64], line[256];
+    int y = 150;
+    const int step = 44;
+    if (!g->dir_ok) {
+        text(fb, 70, y, 2, ORANGE, "Folder listing unavailable. Create config/game.ini with: exe=relative/path.exe");
+        y += step;
+    }
+    const char* exe = g->exe[0] ? g->exe : "(not found)";
+    size_t len = strlen(exe);
+    snprintf(line, sizeof line, "Executable: %s%s", len > 90 ? "..." : "", exe + (len > 90 ? len - 90 : 0));
+    text(fb, 70, y, 2, g->exe[0] ? WHITE : ORANGE, line);
+    y += step;
+    text(fb, 70, y, 2, GRAY, "Source:");
+    text(fb, 70 + 8 * 16, y, 2, GRAY, g->exe_source[0] ? g->exe_source : "-");
+    y += step + 8;
+    if (g->pe.ok) {
+        const PeInfo* p = &g->pe;
+        fmt_size(a, sizeof a, p->file_size);
+        snprintf(line, sizeof line, "File size %s    Machine %s    Subsystem %s", a,
+                 p->machine == 0x8664 ? "x64 (AMD64)" : "other", p->subsystem == 2 ? "Windows GUI" : (p->subsystem == 3 ? "Console" : "other"));
+        text(fb, 70, y, 2, WHITE, line); y += step;
+        snprintf(line, sizeof line, "Image base 0x%llX    Entry RVA 0x%X    Sections %d    TLS %s", (unsigned long long)p->image_base,
+                 p->entry_rva, p->sections, yes_no(p->has_tls));
+        text(fb, 70, y, 2, WHITE, line); y += step;
+        snprintf(line, sizeof line, "Imports: %d DLLs, %d functions    Delay-load: %d DLLs, %d functions", p->dlls, p->funcs,
+                 p->delay_dlls, p->delay_funcs);
+        text(fb, 70, y, 2, YELLOW, line); y += step + 8;
+        snprintf(line, sizeof line, "Graphics hints:  D3D12 %s   D3D11 %s   Vulkan %s   OpenGL %s   DXC %s", yes_no(p->hint_d3d12),
+                 yes_no(p->hint_d3d11), yes_no(p->hint_vulkan), yes_no(p->hint_opengl), yes_no(p->hint_dxc));
+        text(fb, 70, y, 2, WHITE, line); y += step;
+        snprintf(line, sizeof line, "Middleware hints: Steam %s   EOS %s   Oodle %s   Bink %s   FMOD %s", yes_no(p->hint_steam),
+                 yes_no(p->hint_eos), yes_no(p->hint_oodle), yes_no(p->hint_bink), yes_no(p->hint_fmod));
+        text(fb, 70, y, 2, WHITE, line); y += step + 8;
+    } else {
+        snprintf(line, sizeof line, "Executable analysis failed: %s", g->pe.error);
+        text(fb, 70, y, 2, ORANGE, line); y += step + 8;
+    }
+    fmt_size(a, sizeof a, g->total_bytes);
+    fmt_size(b, sizeof b, g->pak_bytes);
+    snprintf(line, sizeof line, "Game folder: %d files, %s    .pak/.utoc/.ucas: %d files, %s", g->files, a, g->pak_files, b);
+    text(fb, 70, y, 2, WHITE, line); y += step;
+    snprintf(line, sizeof line, ".exe files: %d    .dll files: %d", g->exe_files, g->dll_files);
+    text(fb, 70, y, 2, WHITE, line); y += step + 8;
+    text(fb, 70, y, 2, GRAY, "Full report (all imports):"); y += step;
+    text(fb, 70, y, 2, WHITE, REPORT_FILE); y += step + 8;
+    text(fb, 70, y, 2, ORANGE, "Runtime status: phase 1 (analysis only). The game cannot be executed yet.");
+    text_centered(fb, UI_W / 2, 1010, 2, GRAY, "Cross: analyze again    Circle: back");
+}
+
 int ui_log_visible_lines(void) { return LOG_VISIBLE; }
 
 int ui_count_lines(const char* t) {
@@ -345,6 +416,7 @@ void ui_draw(uint32_t* fb, const UiState* st) {
     memcpy(fb, bg, sizeof bg);
     if (st->screen == SCREEN_SETTINGS) screen_settings(fb, st);
     else if (st->screen == SCREEN_LOG) screen_log(fb, st);
+    else if (st->screen == SCREEN_GAME) screen_game(fb, st);
     else screen_main(fb, st);
     overlay(fb, st);
 }

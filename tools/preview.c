@@ -8,6 +8,13 @@
 #include "../app/src/settings.c" /* junto aqui para compilar so com ui.c */
 
 static uint32_t fb[UI_W * UI_H];
+static GameReport fake_game = {
+    .done = 1, .dir_ok = 1,
+    .exe = "/data/Titans/game/Titans/Binaries/Win64/Titans-Win64-Shipping.exe", .exe_source = "auto (Shipping)",
+    .pe = {.ok = 1, .machine = 0x8664, .subsystem = 2, .image_base = 0x140000000ULL, .size_of_image = 0x6B00000,
+           .entry_rva = 0x4A21F0, .sections = 9, .dlls = 38, .funcs = 2814, .delay_dlls = 5, .delay_funcs = 96, .has_tls = 1,
+           .has_reloc = 1, .hint_d3d12 = 1, .hint_d3d11 = 1, .hint_oodle = 1, .hint_fmod = 0, .file_size = 212400000LL},
+    .files = 1432, .total_bytes = 62300000000LL, .pak_files = 5, .pak_bytes = 61800000000LL, .exe_files = 2, .dll_files = 41};
 
 static int selftest(void) {
     Settings a, b;
@@ -40,6 +47,7 @@ int main(int argc, char** argv) {
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "settings")) st.screen = SCREEN_SETTINGS;
         if (!strcmp(argv[i], "log")) st.screen = SCREEN_LOG;
+        if (!strcmp(argv[i], "game")) { st.screen = SCREEN_GAME; st.game = &fake_game; }
         if (!strcmp(argv[i], "ready")) { st.game_ready = 1; st.message = "Runtime do jogo ainda nao implementado (fase 3)"; }
         if (!strncmp(argv[i], "sel=", 4)) st.selected = atoi(argv[i] + 4);
         if (!strncmp(argv[i], "set=", 4)) st.set_sel = atoi(argv[i] + 4);
